@@ -982,12 +982,18 @@ Expected: PASS, 13 tests total (2 config + 3 db + 2 buy + 3 pre_checkout + 3 suc
 Run: `cd vpn-service && BOT_TOKEN=dummy_token_for_import_check python -c "
 import asyncio
 from bot.main import main
-try:
-    asyncio.run(asyncio.wait_for(main(), timeout=2))
-except asyncio.TimeoutError:
-    print('OK: reached polling loop without crashing')
+
+async def run():
+    try:
+        await asyncio.wait_for(main(), timeout=2)
+    except asyncio.TimeoutError:
+        print('OK: reached polling loop without crashing (timed out waiting, as expected)')
+    except Exception as e:
+        print(f'Reached main() and failed at runtime with {type(e).__name__}: {e}')
+
+asyncio.run(run())
 "`
-Expected: prints `OK: reached polling loop without crashing` (it will fail Telegram auth with the dummy token, but should get past `init_db()` and bot/dispatcher construction without raising an import or config error before the 2s timeout cuts it off). If it raises before the timeout, read the traceback — it means something upstream of polling (config, db init) is still broken.
+Expected: one of two acceptable outcomes — either the timeout-OK line, or a runtime failure naming a Telegram-auth-related exception type (e.g. `TelegramUnauthorizedError`) raised once polling actually tries to talk to Telegram with the dummy token. Both mean `init_db()`, config loading, and `Bot`/`Dispatcher` construction all succeeded. An import error, `AttributeError`, or a `RuntimeError` about `BOT_TOKEN` being unset are NOT acceptable — those mean something upstream of polling (config, db init) is still broken; read the traceback.
 
 - [ ] **Step 4: Note the manual end-to-end check for the human operator**
 
