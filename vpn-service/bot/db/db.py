@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import time
 import uuid
 
@@ -19,8 +21,8 @@ CREATE TABLE IF NOT EXISTS orders (
     telegram_id INTEGER NOT NULL,
     tariff_code TEXT NOT NULL,
     months INTEGER NOT NULL,
-    amount_rub INTEGER NOT NULL,
-    yookassa_payment_id TEXT,
+    amount_stars INTEGER NOT NULL,
+    telegram_payment_charge_id TEXT,
     status TEXT NOT NULL DEFAULT 'pending',
     created_at INTEGER NOT NULL,
     paid_at INTEGER
@@ -68,40 +70,30 @@ async def upsert_user(
         await db.commit()
 
 
-async def create_order(telegram_id: int, tariff_code: str, months: int, amount_rub: int) -> str:
+async def create_order(telegram_id: int, tariff_code: str, months: int, amount_stars: int) -> str:
     order_id = str(uuid.uuid4())
     async with aiosqlite.connect(config.database_path) as db:
         await db.execute(
-            """INSERT INTO orders (order_id, telegram_id, tariff_code, months, amount_rub, status, created_at)
+            """INSERT INTO orders (order_id, telegram_id, tariff_code, months, amount_stars, status, created_at)
                VALUES (?, ?, ?, ?, ?, 'pending', ?)""",
-            (order_id, telegram_id, tariff_code, months, amount_rub, int(time.time())),
+            (order_id, telegram_id, tariff_code, months, amount_stars, int(time.time())),
         )
         await db.commit()
     return order_id
 
 
-async def attach_yookassa_payment(order_id: str, yookassa_payment_id: str) -> None:
-    async with aiosqlite.connect(config.database_path) as db:
-        await db.execute(
-            "UPDATE orders SET yookassa_payment_id = ? WHERE order_id = ?",
-            (yookassa_payment_id, order_id),
-        )
-        await db.commit()
-
-
-async def get_order_by_yookassa_payment(yookassa_payment_id: str) -> aiosqlite.Row | None:
+async def get_order(order_id: str) -> aiosqlite.Row | None:
     async with aiosqlite.connect(config.database_path) as db:
         db.row_factory = aiosqlite.Row
-        cursor = await db.execute(
-            "SELECT * FROM orders WHERE yookassa_payment_id = ?", (yookassa_payment_id,)
-        )
+        cursor = await db.execute("SELECT * FROM orders WHERE order_id = ?", (order_id,))
         return await cursor.fetchone()
 
 
-async def mark_order_paid(order_id: str) -> None:
+async def mark_order_paid(order_id: str, telegram_payment_charge_id: str) -> None:
     async with aiosqlite.connect(config.database_path) as db:
         await db.execute(
-            "UPDATE orders SET status = 'paid', paid_at = ? WHERE order_id = ?",
-            (int(time.time()), order_id),
+            """UPDATE orders SET status = 'paid', telegram_payment_charge_id = ?, paid_at = ?
+               WHERE order_id = ?""",
+            (telegram_payment_charge_id, int(time.time()), order_id),
         )
         await db.commit()
