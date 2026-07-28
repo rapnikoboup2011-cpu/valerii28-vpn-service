@@ -23,6 +23,7 @@ class Config:
 
     remnawave_base_url: str = os.getenv("REMNAWAVE_BASE_URL", "")
     remnawave_api_token: str = os.getenv("REMNAWAVE_API_TOKEN", "")
+    suno_api_base_url: str = field(default_factory=lambda: os.getenv("SUNO_API_BASE_URL", ""))
 
     database_path: str = os.getenv("DATABASE_PATH", "./vpn_bot.sqlite3")
 
