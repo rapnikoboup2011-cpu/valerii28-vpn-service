@@ -65,3 +65,8 @@ async def test_wait_for_clips_raises_timeout_error(monkeypatch):
 
     with pytest.raises(TimeoutError):
         await suno_client.wait_for_clips(["clip-1", "clip-2"], timeout=0, interval=0)
+
+
+async def test_wait_for_clips_raises_on_empty_ids():
+    with pytest.raises(ValueError):
+        await suno_client.wait_for_clips([])

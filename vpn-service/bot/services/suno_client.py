@@ -21,6 +21,8 @@ async def generate_song(prompt: str) -> list[str]:
 async def wait_for_clips(
     ids: list[str], timeout: float = 240.0, interval: float = 8.0
 ) -> list[dict]:
+    if not ids:
+        raise ValueError("wait_for_clips called with no clip ids")
     deadline = time.monotonic() + timeout
     while True:
         response = await _client.get("/api/get", params={"ids": ",".join(ids)})
