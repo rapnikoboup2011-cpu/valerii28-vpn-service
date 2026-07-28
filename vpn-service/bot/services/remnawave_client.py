@@ -17,6 +17,7 @@ from datetime import datetime, timedelta, timezone
 import httpx
 
 from bot.config import config
+from bot.db import db as db_module
 
 _client = httpx.AsyncClient(
     base_url=config.remnawave_base_url,
@@ -62,3 +63,16 @@ async def get_user(remnawave_uuid: str) -> dict:
 async def get_subscription_url(user: dict) -> str:
     short_uuid = user.get("shortUuid") or user["uuid"]
     return f"{config.remnawave_base_url}/api/sub/{short_uuid}"
+
+
+async def is_subscription_active(telegram_id: int) -> bool:
+    user_row = await db_module.get_user(telegram_id)
+    if user_row is None or not user_row["remnawave_uuid"]:
+        return False
+
+    remnawave_user = await get_user(user_row["remnawave_uuid"])
+    if remnawave_user.get("status") != "ACTIVE":
+        return False
+
+    expire_at = datetime.fromisoformat(remnawave_user["expireAt"].replace("Z", "+00:00"))
+    return expire_at > datetime.now(timezone.utc)
