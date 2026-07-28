@@ -1,10 +1,17 @@
 from aiogram import F, Router
 from aiogram.filters import CommandStart
-from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
+from aiogram.types import (
+    CallbackQuery,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    LabeledPrice,
+    Message,
+    PreCheckoutQuery,
+)
 
 from bot.config import config
 from bot.db import db
-from bot.services import remnawave_client, yookassa_client
+from bot.services import remnawave_client
 
 router = Router()
 
@@ -13,7 +20,7 @@ def _tariffs_keyboard() -> InlineKeyboardMarkup:
     rows = [
         [
             InlineKeyboardButton(
-                text=f"{t.title} — {t.price_rub}₽",
+                text=f"{t.title} — {t.price_stars} ⭐",
                 callback_data=f"buy:{t.code}",
             )
         ]
@@ -49,20 +56,15 @@ async def on_buy(callback: CallbackQuery) -> None:
         return
 
     telegram_id = callback.from_user.id
-    order_id = await db.create_order(telegram_id, tariff.code, tariff.months, tariff.price_rub)
+    order_id = await db.create_order(telegram_id, tariff.code, tariff.months, tariff.price_stars)
 
-    return_url = f"https://t.me/{(await callback.bot.get_me()).username}"
-    payment_id, confirmation_url = yookassa_client.create_payment(
-        amount_rub=tariff.price_rub,
+    await callback.message.answer_invoice(
+        title=f"VPN подписка — {tariff.title}",
         description=f"Подписка VPN на {tariff.months} мес.",
-        order_id=order_id,
-        return_url=return_url,
-    )
-    await db.attach_yookassa_payment(order_id, payment_id)
-
-    await callback.message.answer(
-        f"Тариф «{tariff.title}» — {tariff.price_rub}₽\n\n"
-        f"Оплатите по ссылке, после оплаты доступ подключится автоматически:\n{confirmation_url}"
+        payload=order_id,
+        provider_token="",
+        currency="XTR",
+        prices=[LabeledPrice(label=tariff.title, amount=tariff.price_stars)],
     )
     await callback.answer()
 
