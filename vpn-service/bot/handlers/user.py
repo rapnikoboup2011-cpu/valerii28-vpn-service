@@ -83,6 +83,31 @@ async def on_pre_checkout(pre_checkout_query: PreCheckoutQuery) -> None:
     await pre_checkout_query.answer(ok=True)
 
 
+@router.message(F.successful_payment)
+async def on_successful_payment(message: Message) -> None:
+    payment = message.successful_payment
+    order_id = payment.invoice_payload
+    order = await db.get_order(order_id)
+    if order is None or order["status"] == "paid":
+        return
+
+    await db.mark_order_paid(order_id, payment.telegram_payment_charge_id)
+
+    try:
+        subscription_url = await deliver_subscription(order["telegram_id"], order["months"])
+    except Exception as exc:  # noqa: BLE001 - payment already captured, admin must be told regardless of cause
+        await message.bot.send_message(
+            config.admin_telegram_id,
+            f"⚠️ Оплата прошла (order_id={order_id}), но выдача подписки упала: {exc}",
+        )
+        return
+
+    await message.answer(
+        f"Оплата получена! Ваша ссылка подписки:\n{subscription_url}\n\n"
+        "Вставьте её в приложение (Happ, v2rayNG и т.п.) в качестве подписки."
+    )
+
+
 async def deliver_subscription(telegram_id: int, months: int) -> str:
     """Creates or extends the Remnawave user for telegram_id, returns subscription URL."""
     user_row = await db.get_user(telegram_id)
