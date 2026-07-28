@@ -69,6 +69,20 @@ async def on_buy(callback: CallbackQuery) -> None:
     await callback.answer()
 
 
+@router.pre_checkout_query()
+async def on_pre_checkout(pre_checkout_query: PreCheckoutQuery) -> None:
+    order = await db.get_order(pre_checkout_query.invoice_payload)
+    if order is None:
+        await pre_checkout_query.answer(
+            ok=False, error_message="Заказ не найден, попробуйте оформить заново через /start."
+        )
+        return
+    if order["status"] == "paid":
+        await pre_checkout_query.answer(ok=False, error_message="Этот заказ уже оплачен.")
+        return
+    await pre_checkout_query.answer(ok=True)
+
+
 async def deliver_subscription(telegram_id: int, months: int) -> str:
     """Creates or extends the Remnawave user for telegram_id, returns subscription URL."""
     user_row = await db.get_user(telegram_id)
