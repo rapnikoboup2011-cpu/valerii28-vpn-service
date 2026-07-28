@@ -24,6 +24,7 @@ async def test_pre_checkout_rejects_missing_order(monkeypatch):
 
     _, kwargs = query.answer.call_args
     assert kwargs["ok"] is False
+    assert kwargs["error_message"] == "Заказ не найден, попробуйте оформить заново через /start."
 
 
 async def test_pre_checkout_rejects_already_paid_order(monkeypatch):
@@ -36,3 +37,4 @@ async def test_pre_checkout_rejects_already_paid_order(monkeypatch):
 
     _, kwargs = query.answer.call_args
     assert kwargs["ok"] is False
+    assert kwargs["error_message"] == "Этот заказ уже оплачен."
