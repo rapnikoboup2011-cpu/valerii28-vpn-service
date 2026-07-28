@@ -32,6 +32,12 @@ CREATE TABLE IF NOT EXISTS orders (
 
 async def init_db() -> None:
     async with aiosqlite.connect(config.database_path) as db:
+        cursor = await db.execute("PRAGMA table_info(orders)")
+        columns = {row[1] for row in await cursor.fetchall()}
+        if columns and ("amount_rub" in columns or "yookassa_payment_id" in columns):
+            # Pre-existing DB from the YooKassa era: no production data has ever
+            # existed under this schema, so it's safe to drop and recreate.
+            await db.execute("DROP TABLE orders")
         await db.executescript(_SCHEMA)
         await db.commit()
 

@@ -80,6 +80,11 @@ async def on_pre_checkout(pre_checkout_query: PreCheckoutQuery) -> None:
     if order["status"] == "paid":
         await pre_checkout_query.answer(ok=False, error_message="Этот заказ уже оплачен.")
         return
+    if order["telegram_id"] != pre_checkout_query.from_user.id:
+        await pre_checkout_query.answer(
+            ok=False, error_message="Этот заказ оформлен на другого пользователя."
+        )
+        return
     await pre_checkout_query.answer(ok=True)
 
 
@@ -96,15 +101,23 @@ async def on_successful_payment(message: Message) -> None:
     try:
         subscription_url = await deliver_subscription(order["telegram_id"], order["months"])
     except Exception as exc:  # noqa: BLE001 - payment already captured, admin must be told regardless of cause
-        await message.bot.send_message(
-            config.admin_telegram_id,
-            f"⚠️ Оплата прошла (order_id={order_id}), но выдача подписки упала: {exc}",
+        try:
+            await message.bot.send_message(
+                config.admin_telegram_id,
+                f"⚠️ Оплата прошла (order_id={order_id}), но выдача подписки упала: {exc}",
+            )
+        except Exception:  # noqa: BLE001 - admin alert failing must not swallow the user notice
+            pass
+        await message.answer(
+            "Оплата получена, но выдача подписки временно недоступна. "
+            "Мы уже разбираемся, скоро вернёмся с доступом."
         )
         return
 
-    await message.answer(
+    await message.bot.send_message(
+        order["telegram_id"],
         f"Оплата получена! Ваша ссылка подписки:\n{subscription_url}\n\n"
-        "Вставьте её в приложение (Happ, v2rayNG и т.п.) в качестве подписки."
+        "Вставьте её в приложение (Happ, v2rayNG и т.п.) в качестве подписки.",
     )
 
 
