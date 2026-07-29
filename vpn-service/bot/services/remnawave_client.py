@@ -33,6 +33,7 @@ async def create_user(username: str, months: int) -> dict:
             "username": username,
             "expireAt": expire_at.isoformat(),
             "status": "ACTIVE",
+            "activeInternalSquads": [config.remnawave_internal_squad_uuid],
         },
     )
     response.raise_for_status()

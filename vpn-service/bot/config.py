@@ -23,6 +23,7 @@ class Config:
 
     remnawave_base_url: str = os.getenv("REMNAWAVE_BASE_URL", "")
     remnawave_api_token: str = os.getenv("REMNAWAVE_API_TOKEN", "")
+    remnawave_internal_squad_uuid: str = os.getenv("REMNAWAVE_INTERNAL_SQUAD_UUID", "")
 
     database_path: str = os.getenv("DATABASE_PATH", "./vpn_bot.sqlite3")
 
