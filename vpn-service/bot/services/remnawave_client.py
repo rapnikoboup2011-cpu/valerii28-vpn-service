@@ -61,5 +61,4 @@ async def get_user(remnawave_uuid: str) -> dict:
 
 
 async def get_subscription_url(user: dict) -> str:
-    short_uuid = user.get("shortUuid") or user["uuid"]
-    return f"{config.remnawave_base_url}/api/sub/{short_uuid}"
+    return user["subscriptionUrl"]

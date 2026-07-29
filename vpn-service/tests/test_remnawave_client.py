@@ -20,3 +20,15 @@ async def test_create_user_assigns_configured_internal_squad(monkeypatch):
 
     _, kwargs = post.call_args
     assert kwargs["json"]["activeInternalSquads"] == ["squad-uuid-123"]
+
+
+async def test_get_subscription_url_uses_panel_provided_url():
+    user = {
+        "uuid": "u1",
+        "shortUuid": "BBHBLFHbb4PpKCCY",
+        "subscriptionUrl": "https://sub.valerii28.ru/BBHBLFHbb4PpKCCY",
+    }
+
+    url = await remnawave_client.get_subscription_url(user)
+
+    assert url == "https://sub.valerii28.ru/BBHBLFHbb4PpKCCY"
