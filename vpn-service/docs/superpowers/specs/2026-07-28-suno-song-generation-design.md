@@ -27,8 +27,10 @@ gated purely on having an active VPN subscription, same as the rest of the bot.
    `GET /api/get?ids=<id1>,<id2>` on an interval until every clip has a non-empty
    `audio_url` (or reaches a timeout).
 5. As each clip becomes ready, the bot sends it with
-   `message.answer_audio(audio=URLInputFile(audio_url), title=clip_title)`. Telegram
-   fetches the file from the URL server-side — the bot never downloads it to disk.
+   `message.answer_audio(audio=audio_url, title=clip_title)` — the URL is passed as a
+   plain string. Telegram fetches the file from the URL server-side — the bot never
+   downloads it to disk (unlike `URLInputFile`, which would proxy the download through
+   the bot process).
 6. If suno-api returns an error (HTTP error, account/captcha/credits exhausted) or
    polling times out, the user gets a neutral "не получилось сгенерировать песню,
    попробуйте позже" and the admin gets the exception detail via DM — same pattern as

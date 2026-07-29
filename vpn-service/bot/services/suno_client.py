@@ -28,7 +28,7 @@ async def wait_for_clips(
         response = await _client.get("/api/get", params={"ids": ",".join(ids)})
         response.raise_for_status()
         clips = response.json()
-        if all(clip.get("audio_url") for clip in clips):
+        if len(clips) == len(ids) and all(clip.get("audio_url") for clip in clips):
             return clips
         if time.monotonic() >= deadline:
             raise TimeoutError(f"Suno clips not ready after {timeout}s: ids={ids}")
