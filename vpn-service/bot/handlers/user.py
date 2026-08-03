@@ -32,6 +32,16 @@ def _tariffs_keyboard() -> InlineKeyboardMarkup:
 @router.message(CommandStart())
 async def cmd_start(message: Message) -> None:
     await db.upsert_user(message.from_user.id)
+    user = await db.get_user(message.from_user.id)
+
+    if user and user["subscription_url"]:
+        await message.answer(
+            f"С возвращением! Ваша подписка активна.\n\nСсылка на подписку:\n{user['subscription_url']}\n\n"
+            "Хотите продлить или сменить тариф?",
+            reply_markup=_tariffs_keyboard(),
+        )
+        return
+
     await message.answer(
         "Добро пожаловать! Выберите тариф для подключения VPN:",
         reply_markup=_tariffs_keyboard(),
