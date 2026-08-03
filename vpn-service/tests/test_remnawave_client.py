@@ -1,3 +1,4 @@
+import base64
 from unittest.mock import AsyncMock, MagicMock
 
 from bot.config import config
@@ -32,3 +33,18 @@ async def test_get_subscription_url_uses_panel_provided_url():
     url = await remnawave_client.get_subscription_url(user)
 
     assert url == "https://sub.valerii28.ru/BBHBLFHbb4PpKCCY"
+
+
+async def test_get_raw_config_decodes_base64_response(monkeypatch):
+    raw_text = "ss://chacha20-ietf-poly1305:pass123@62.84.99.158:1234#valerii28-main"
+    response = MagicMock()
+    response.text = base64.b64encode(raw_text.encode()).decode()
+    response.raise_for_status = MagicMock()
+    get = AsyncMock(return_value=response)
+    monkeypatch.setattr(remnawave_client._client, "get", get)
+
+    user = {"uuid": "u1", "shortUuid": "BBHBLFHbb4PpKCCY"}
+    result = await remnawave_client.get_raw_config(user)
+
+    get.assert_awaited_once_with("/api/sub/BBHBLFHbb4PpKCCY")
+    assert result == raw_text

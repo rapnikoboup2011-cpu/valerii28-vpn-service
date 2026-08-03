@@ -12,6 +12,7 @@ here — everything Remnawave-specific is isolated in this one file, nothing
 else in the bot depends on the exact shape.
 """
 
+import base64
 from datetime import datetime, timedelta, timezone
 
 import httpx
@@ -62,3 +63,11 @@ async def get_user(remnawave_uuid: str) -> dict:
 
 async def get_subscription_url(user: dict) -> str:
     return user["subscriptionUrl"]
+
+
+async def get_raw_config(user: dict) -> str:
+    """Plain-text fallback (e.g. an ss:// link) for clients that can't load the subscription page."""
+    short_uuid = user.get("shortUuid") or user["uuid"]
+    response = await _client.get(f"/api/sub/{short_uuid}")
+    response.raise_for_status()
+    return base64.b64decode(response.text).decode()

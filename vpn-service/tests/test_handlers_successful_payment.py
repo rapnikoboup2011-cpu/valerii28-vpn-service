@@ -16,7 +16,8 @@ async def test_successful_payment_delivers_subscription(monkeypatch):
     mark_paid = AsyncMock()
     monkeypatch.setattr("bot.handlers.user.db.mark_order_paid", mark_paid)
     monkeypatch.setattr(
-        "bot.handlers.user.deliver_subscription", AsyncMock(return_value="https://sub.example/abc")
+        "bot.handlers.user.deliver_subscription",
+        AsyncMock(return_value=("https://sub.example/abc", "ss://raw-config-line")),
     )
 
     message = _make_message("order-1")
@@ -28,6 +29,7 @@ async def test_successful_payment_delivers_subscription(monkeypatch):
     args, _ = message.bot.send_message.call_args
     assert args[0] == order["telegram_id"]
     assert "https://sub.example/abc" in args[1]
+    assert "ss://raw-config-line" in args[1]
     message.answer.assert_not_awaited()
 
 

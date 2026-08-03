@@ -109,7 +109,7 @@ async def on_successful_payment(message: Message) -> None:
     await db.mark_order_paid(order_id, payment.telegram_payment_charge_id)
 
     try:
-        subscription_url = await deliver_subscription(order["telegram_id"], order["months"])
+        subscription_url, raw_config = await deliver_subscription(order["telegram_id"], order["months"])
     except Exception as exc:  # noqa: BLE001 - payment already captured, admin must be told regardless of cause
         try:
             await message.bot.send_message(
@@ -127,12 +127,17 @@ async def on_successful_payment(message: Message) -> None:
     await message.bot.send_message(
         order["telegram_id"],
         f"Оплата получена! Ваша ссылка подписки:\n{subscription_url}\n\n"
-        "Вставьте её в приложение (Happ, v2rayNG и т.п.) в качестве подписки.",
+        "Вставьте её в приложение (Happ, v2rayNG и т.п.) в качестве подписки.\n\n"
+        f"Если страница подписки не открывается, добавьте сервер вручную по этой строке:\n{raw_config}",
     )
 
 
-async def deliver_subscription(telegram_id: int, months: int) -> str:
-    """Creates or extends the Remnawave user for telegram_id, returns subscription URL."""
+async def deliver_subscription(telegram_id: int, months: int) -> tuple[str, str]:
+    """Creates or extends the Remnawave user for telegram_id.
+
+    Returns (subscription_url, raw_config) — the raw config is a plain-text
+    fallback (e.g. an ss:// link) for clients that can't load the subscription page.
+    """
     user_row = await db.get_user(telegram_id)
 
     if user_row and user_row["remnawave_uuid"]:
@@ -142,10 +147,11 @@ async def deliver_subscription(telegram_id: int, months: int) -> str:
         remnawave_user = await remnawave_client.create_user(username, months)
 
     subscription_url = await remnawave_client.get_subscription_url(remnawave_user)
+    raw_config = await remnawave_client.get_raw_config(remnawave_user)
     await db.upsert_user(
         telegram_id,
         remnawave_uuid=remnawave_user["uuid"],
         remnawave_username=remnawave_user.get("username"),
         subscription_url=subscription_url,
     )
-    return subscription_url
+    return subscription_url, raw_config
